@@ -3,50 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Video Format Değiştirici</title>
+  <title>Basit Video WebM Dönüştürücü</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f5f7fa;
+      font-family: Arial, sans-serif;
+      background: #fafafa;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-      margin: 0;
       padding: 2rem;
       color: #333;
-    }
-    h1 {
-      margin-bottom: 1rem;
-    }
-    input, select, button {
-      padding: 0.6rem 1rem;
-      margin: 0.5rem 0;
-      font-size: 1rem;
-      border: 1.5px solid #ddd;
-      border-radius: 6px;
-      transition: border-color 0.3s ease;
-    }
-    input:hover, select:hover, button:hover {
-      border-color: #007bff;
-      cursor: pointer;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      user-select: none;
-    }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
-    }
-    video {
-      margin-top: 1rem;
-      max-width: 100%;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgb(0 0 0 / 0.1);
     }
     .container {
       max-width: 480px;
@@ -54,130 +20,118 @@
       background: white;
       padding: 2rem;
       border-radius: 12px;
-      box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
-    }
-    #progressWrapper {
-      width: 100%;
-      background-color: #eee;
-      border-radius: 6px;
-      overflow: hidden;
-      margin: 1rem 0;
-      height: 20px;
-      display: none;
-    }
-    #progressBar {
-      height: 100%;
-      background-color: #007bff;
-      width: 0%;
-      transition: width 0.2s ease;
-    }
-    #progressText {
-      margin-top: 0.3rem;
-      font-weight: 600;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
       text-align: center;
-      color: #007bff;
-      display: none;
+    }
+    input, button {
+      margin: 1rem 0;
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1.5px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    video {
+      margin-top: 1rem;
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Video Format Değiştirici</h1>
-    <input type="file" id="videoInput" accept="video/*" />
-    <select id="formatSelect">
-      <option value="mp4">MP4</option>
-      <option value="webm">WEBM</option>
-      <option value="avi">AVI</option>
-      <option value="mov">MOV</option>
-    </select>
-    <button id="convertBtn" disabled>Videoyu Dönüştür</button>
-
-    <div id="progressWrapper">
-      <div id="progressBar"></div>
-    </div>
-    <div id="progressText"></div>
-
-    <video id="videoPreview" controls></video>
-    <a id="downloadLink" style="display:none; margin-top:1rem;" download>Videoyu İndir</a>
+    <h1>Video WebM Dönüştürücü</h1>
+    <input type="file" id="inputVideo" accept="video/*" />
+    <button id="convertBtn" disabled>Videoyu WebM'ye Dönüştür</button>
+    <video id="preview" controls></video>
+    <a id="downloadLink" style="display:none; margin-top: 1rem;">Videoyu İndir</a>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.5/dist/ffmpeg.min.js"></script>
-  <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ log: true });
+<script>
+  const inputVideo = document.getElementById('inputVideo');
+  const convertBtn = document.getElementById('convertBtn');
+  const preview = document.getElementById('preview');
+  const downloadLink = document.getElementById('downloadLink');
 
-    const videoInput = document.getElementById('videoInput');
-    const formatSelect = document.getElementById('formatSelect');
-    const convertBtn = document.getElementById('convertBtn');
-    const videoPreview = document.getElementById('videoPreview');
-    const downloadLink = document.getElementById('downloadLink');
-    const progressBar = document.getElementById('progressBar');
-    const progressWrapper = document.getElementById('progressWrapper');
-    const progressText = document.getElementById('progressText');
+  let videoFile;
 
-    let selectedFile;
-
-    videoInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        selectedFile = e.target.files[0];
-        videoPreview.src = URL.createObjectURL(selectedFile);
-        videoPreview.load();
-        downloadLink.style.display = 'none';
-        convertBtn.disabled = false;
-        progressWrapper.style.display = 'none';
-        progressText.style.display = 'none';
-        progressBar.style.width = '0%';
-      }
-    });
-
-    ffmpeg.setProgress(({ ratio }) => {
-      // ratio: 0 to 1
-      const percent = Math.round(ratio * 100);
-      progressBar.style.width = percent + '%';
-      progressText.textContent = `Dönüştürme: %${percent}`;
-      progressWrapper.style.display = 'block';
-      progressText.style.display = 'block';
-    });
-
-    convertBtn.addEventListener('click', async () => {
-      if (!selectedFile) return;
-
-      convertBtn.disabled = true;
-      convertBtn.textContent = 'Dönüştürülüyor...';
-
-      if (!ffmpeg.isLoaded()) {
-        await ffmpeg.load();
-      }
-
-      ffmpeg.FS('writeFile', 'input', await fetchFile(selectedFile));
-
-      const outFormat = formatSelect.value;
-      const outputName = `output.${outFormat}`;
-
-      try {
-        await ffmpeg.run('-i', 'input', outputName);
-        const data = ffmpeg.FS('readFile', outputName);
-
-        const videoBlob = new Blob([data.buffer], { type: `video/${outFormat}` });
-        const url = URL.createObjectURL(videoBlob);
-
-        videoPreview.src = url;
-        videoPreview.load();
-
-        downloadLink.href = url;
-        downloadLink.download = outputName;
-        downloadLink.textContent = `Videoyu ${outFormat.toUpperCase()} olarak indir`;
-        downloadLink.style.display = 'inline-block';
-      } catch (err) {
-        alert('Dönüştürme sırasında hata oluştu: ' + err.message);
-      }
-
-      convertBtn.textContent = 'Videoyu Dönüştür';
+  inputVideo.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      videoFile = e.target.files[0];
+      preview.src = URL.createObjectURL(videoFile);
+      preview.load();
       convertBtn.disabled = false;
-      progressWrapper.style.display = 'none';
-      progressText.style.display = 'none';
-      progressBar.style.width = '0%';
-    });
-  </script>
+      downloadLink.style.display = 'none';
+    }
+  });
+
+  convertBtn.addEventListener('click', async () => {
+    if (!videoFile) return;
+    convertBtn.disabled = true;
+    convertBtn.textContent = 'Dönüştürülüyor...';
+
+    // Video element ve MediaRecorder kullanarak WebM'ye kayıt yapacağız
+    const videoUrl = URL.createObjectURL(videoFile);
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.muted = true;  // autoplay için sessiz olmalı
+    video.playsInline = true;
+    await video.play();
+
+    const stream = video.captureStream();
+    if (!stream) {
+      alert('Tarayıcınız video yakalamayı desteklemiyor.');
+      convertBtn.disabled = false;
+      convertBtn.textContent = "Videoyu WebM'ye Dönüştür";
+      return;
+    }
+
+    const options = { mimeType: 'video/webm; codecs=vp8' };
+    let recordedChunks = [];
+    const mediaRecorder = new MediaRecorder(stream, options);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) recordedChunks.push(event.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      preview.src = url;
+      preview.load();
+      downloadLink.href = url;
+      downloadLink.download = videoFile.name.replace(/\.\w+$/, '') + '.webm';
+      downloadLink.style.display = 'inline-block';
+      downloadLink.textContent = "Videoyu İndir";
+      convertBtn.disabled = false;
+      convertBtn.textContent = "Videoyu WebM'ye Dönüştür";
+    };
+
+    // Yaklaşık video süresi kadar kayıt yapalım
+    video.onloadedmetadata = () => {
+      mediaRecorder.start();
+      setTimeout(() => {
+        mediaRecorder.stop();
+        video.pause();
+      }, video.duration * 1000);
+    };
+  });
+</script>
 </body>
 </html>
