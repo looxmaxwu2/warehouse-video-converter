@@ -56,6 +56,28 @@
       border-radius: 12px;
       box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
     }
+    #progressWrapper {
+      width: 100%;
+      background-color: #eee;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1rem 0;
+      height: 20px;
+      display: none;
+    }
+    #progressBar {
+      height: 100%;
+      background-color: #007bff;
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+    #progressText {
+      margin-top: 0.3rem;
+      font-weight: 600;
+      text-align: center;
+      color: #007bff;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -69,6 +91,12 @@
       <option value="mov">MOV</option>
     </select>
     <button id="convertBtn" disabled>Videoyu Dönüştür</button>
+
+    <div id="progressWrapper">
+      <div id="progressBar"></div>
+    </div>
+    <div id="progressText"></div>
+
     <video id="videoPreview" controls></video>
     <a id="downloadLink" style="display:none; margin-top:1rem;" download>Videoyu İndir</a>
   </div>
@@ -83,6 +111,9 @@
     const convertBtn = document.getElementById('convertBtn');
     const videoPreview = document.getElementById('videoPreview');
     const downloadLink = document.getElementById('downloadLink');
+    const progressBar = document.getElementById('progressBar');
+    const progressWrapper = document.getElementById('progressWrapper');
+    const progressText = document.getElementById('progressText');
 
     let selectedFile;
 
@@ -93,14 +124,26 @@
         videoPreview.load();
         downloadLink.style.display = 'none';
         convertBtn.disabled = false;
+        progressWrapper.style.display = 'none';
+        progressText.style.display = 'none';
+        progressBar.style.width = '0%';
       }
+    });
+
+    ffmpeg.setProgress(({ ratio }) => {
+      // ratio: 0 to 1
+      const percent = Math.round(ratio * 100);
+      progressBar.style.width = percent + '%';
+      progressText.textContent = `Dönüştürme: %${percent}`;
+      progressWrapper.style.display = 'block';
+      progressText.style.display = 'block';
     });
 
     convertBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
 
       convertBtn.disabled = true;
-      convertBtn.textContent = 'Dönüştürülüyor... (İlk seferde biraz yavaş olabilir)';
+      convertBtn.textContent = 'Dönüştürülüyor...';
 
       if (!ffmpeg.isLoaded()) {
         await ffmpeg.load();
@@ -131,6 +174,9 @@
 
       convertBtn.textContent = 'Videoyu Dönüştür';
       convertBtn.disabled = false;
+      progressWrapper.style.display = 'none';
+      progressText.style.display = 'none';
+      progressBar.style.width = '0%';
     });
   </script>
 </body>
