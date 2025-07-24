@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Format Değiştirici</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    input, select, button {
+      padding: 0.6rem 1rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      border: 1.5px solid #ddd;
+      border-radius: 6px;
+      transition: border-color 0.3s ease;
+    }
+    input:hover, select:hover, button:hover {
+      border-color: #007bff;
+      cursor: pointer;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      user-select: none;
+    }
+    button:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    video {
+      margin-top: 1rem;
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgb(0 0 0 / 0.1);
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Video Format Değiştirici</h1>
+    <input type="file" id="videoInput" accept="video/*" />
+    <select id="formatSelect">
+      <option value="mp4">MP4</option>
+      <option value="webm">WEBM</option>
+      <option value="avi">AVI</option>
+      <option value="mov">MOV</option>
+    </select>
+    <button id="convertBtn" disabled>Videoyu Dönüştür</button>
+    <video id="videoPreview" controls></video>
+    <a id="downloadLink" style="display:none; margin-top:1rem;" download>Videoyu İndir</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.5/dist/ffmpeg.min.js"></script>
+  <script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+
+    const videoInput = document.getElementById('videoInput');
+    const formatSelect = document.getElementById('formatSelect');
+    const convertBtn = document.getElementById('convertBtn');
+    const videoPreview = document.getElementById('videoPreview');
+    const downloadLink = document.getElementById('downloadLink');
+
+    let selectedFile;
+
+    videoInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        selectedFile = e.target.files[0];
+        videoPreview.src = URL.createObjectURL(selectedFile);
+        videoPreview.load();
+        downloadLink.style.display = 'none';
+        convertBtn.disabled = false;
+      }
+    });
+
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Dönüştürülüyor... (İlk seferde biraz yavaş olabilir)';
+
+      if (!ffmpeg.isLoaded()) {
+        await ffmpeg.load();
+      }
+
+      ffmpeg.FS('writeFile', 'input', await fetchFile(selectedFile));
+
+      const outFormat = formatSelect.value;
+      const outputName = `output.${outFormat}`;
+
+      try {
+        await ffmpeg.run('-i', 'input', outputName);
+        const data = ffmpeg.FS('readFile', outputName);
+
+        const videoBlob = new Blob([data.buffer], { type: `video/${outFormat}` });
+        const url = URL.createObjectURL(videoBlob);
+
+        videoPreview.src = url;
+        videoPreview.load();
+
+        downloadLink.href = url;
+        downloadLink.download = outputName;
+        downloadLink.textContent = `Videoyu ${outFormat.toUpperCase()} olarak indir`;
+        downloadLink.style.display = 'inline-block';
+      } catch (err) {
+        alert('Dönüştürme sırasında hata oluştu: ' + err.message);
+      }
+
+      convertBtn.textContent = 'Videoyu Dönüştür';
+      convertBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
