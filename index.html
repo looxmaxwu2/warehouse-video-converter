@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Video Format Dönüştürücü</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #fff;
+    color: #333;
+    padding: 2rem;
+    text-align: center;
+  }
+  input, select, button {
+    margin: 1rem 0;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+  }
+  button:disabled {
+    background: #ccc;
+  }
+  video {
+    margin-top: 2rem;
+    max-width: 400px;
+  }
+  #loadingOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #3a86ff;
+    visibility: hidden;
+  }
+  #loadingOverlay.visible {
+    visibility: visible;
+  }
+</style>
+</head>
+<body>
+
+<h1>Video Format Dönüştürücü</h1>
+
+<input type="file" id="inputVideo" accept="video/*" /><br />
+<select id="formatSelect">
+  <option value="webm">WebM</option>
+  <option value="mp4">MP4</option>
+  <option value="avi">AVI</option>
+  <option value="mov">MOV</option>
+</select><br />
+<button id="convertBtn">Dönüştür ve İndir</button>
+
+<video id="outputVideo" controls></video>
+
+<div id="loadingOverlay">Dönüştürülüyor, lütfen bekleyin...</div>
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.8/dist/ffmpeg.min.js"></script>
+<script>
+  const { createFFmpeg, fetchFile } = FFmpeg;
+  const ffmpeg = createFFmpeg({ log: true });
+
+  const inputVideo = document.getElementById('inputVideo');
+  const formatSelect = document.getElementById('formatSelect');
+  const convertBtn = document.getElementById('convertBtn');
+  const outputVideo = document.getElementById('outputVideo');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+
+  function showLoading(show) {
+    loadingOverlay.classList.toggle('visible', show);
+  }
+
+  convertBtn.onclick = async () => {
+    if (!inputVideo.files.length) {
+      alert('Lütfen bir video dosyası seçin!');
+      return;
+    }
+
+    convertBtn.disabled = true;
+    showLoading(true);
+
+    if (!ffmpeg.isLoaded()) {
+      try {
+        await ffmpeg.load();
+      } catch (e) {
+        alert('FFmpeg yüklenirken hata oluştu: ' + e.message);
+        convertBtn.disabled = false;
+        showLoading(false);
+        return;
+      }
+    }
+
+    const file = inputVideo.files[0];
+    const outputFormat = formatSelect.value;
+    const outputName = 'output.' + outputFormat;
+
+    try {
+      ffmpeg.FS('writeFile', file.name, await fetchFile(file));
+
+      // Codec parametreleri formatlara göre
+      if (outputFormat === 'mp4') {
+        await ffmpeg.run('-i', file.name, '-c:v', 'libx264', '-c:a', 'aac', outputName);
+      } else if (outputFormat === 'webm') {
+        await ffmpeg.run('-i', file.name, '-c:v', 'libvpx', '-c:a', 'libvorbis', outputName);
+      } else {
+        await ffmpeg.run('-i', file.name, outputName);
+      }
+
+      const data = ffmpeg.FS('readFile', outputName);
+
+      const mimeTypeMap = {
+        mp4: 'video/mp4',
+        webm: 'video/webm',
+        avi: 'video/x-msvideo',
+        mov: 'video/quicktime'
+      };
+      const mimeType = mimeTypeMap[outputFormat] || 'application/octet-stream';
+
+      const videoBlob = new Blob([data.buffer], { type: mimeType });
+      const videoURL = URL.createObjectURL(videoBlob);
+
+      outputVideo.src = videoURL;
+
+      // otomatik indir
+      const a = document.createElement('a');
+      a.href = videoURL;
+      a.download = outputName;
+      a.click();
+
+      ffmpeg.FS('unlink', file.name);
+      ffmpeg.FS('unlink', outputName);
+    } catch (e) {
+      alert('Dönüştürme sırasında hata: ' + e.message);
+    }
+
+    convertBtn.disabled = false;
+    showLoading(false);
+  };
+</script>
+
+</body>
+</html>
