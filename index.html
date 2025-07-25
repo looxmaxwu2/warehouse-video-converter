@@ -1,137 +1,203 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Basit Video WebM Dönüştürücü</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #fafafa;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem;
-      color: #333;
-    }
-    .container {
-      max-width: 480px;
-      width: 100%;
-      background: white;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    input, button {
-      margin: 1rem 0;
-      padding: 0.7rem 1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: 1.5px solid #ccc;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover:not(:disabled) {
-      background-color: #0056b3;
-    }
-    button:disabled {
-      background-color: #999;
-      cursor: not-allowed;
-    }
-    video {
-      margin-top: 1rem;
-      width: 100%;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-  </style>
+<html lang="tr"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Birleştirme Aracı</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        .video-list {
+            margin-bottom: 20px;
+        }
+        .video-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        .video-item video {
+            width: 100px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #downloadBtn {
+            display: none;
+            background-color: #2196F3;
+        }
+        #downloadBtn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Video WebM Dönüştürücü</h1>
-    <input type="file" id="inputVideo" accept="video/*" />
-    <button id="convertBtn" disabled>Videoyu WebM'ye Dönüştür</button>
-    <video id="preview" controls></video>
-    <a id="downloadLink" style="display:none; margin-top: 1rem;">Videoyu İndir</a>
-  </div>
+    <h1>Mp4 Dönüştürme Aracı</h1>
+    
+    <div class="upload-area" id="dropArea">
+        <p>Video dosyalarınızı buraya sürükleyip bırakın veya</p>
+        <input type="file" id="fileInput" accept="video/*" multiple="">
+        <p>MP4, MOV, AVI formatları desteklenmektedir</p>
+    </div>
+    
+    <div class="video-list" id="videoList"><div class="video-item"><video src="blob:https://looxmaxwu2.github.io/4fc1a95f-24c2-419f-832f-f90227bd86a2" controls=""></video><div>
+                    <p><strong>foto_video (1).webm</strong></p>
+                    <p>1.51 MB</p>
+                </div><button>Kaldır</button></div></div>
+    
+    <button id="mergeBtn" style="display: inline-block;">Videoyu Oluştur</button>
+    <a id="downloadBtn" download="birlesik_video.mp4" href="blob:https://looxmaxwu2.github.io/7a186d6c-176b-41d2-a01d-04c33a6e05b9" style="display: inline-block;">Videoyu İndir</a>
+    
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('dropArea');
+        const videoList = document.getElementById('videoList');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        let videoFiles = [];
+        
+        // Dosya seçme işlemi
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        // Sürükle bırak işlemi
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#4CAF50';
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.style.borderColor = '#ccc';
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#ccc';
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        // Dosyaları işleme fonksiyonu
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith('video/')) {
+                    videoFiles.push(file);
+                }
+            }
+            updateVideoList();
+        }
+        
+        // Video listesini güncelleme
+        function updateVideoList() {
+            videoList.innerHTML = '';
+            
+            if (videoFiles.length === 0) {
+                videoList.innerHTML = '<p>Henüz video eklenmedi</p>';
+                mergeBtn.style.display = 'none';
+                return;
+            }
+            
+            mergeBtn.style.display = 'inline-block';
+            
+            videoFiles.forEach((file, index) => {
+                const videoItem = document.createElement('div');
+                videoItem.className = 'video-item';
+                
+                const videoElement = document.createElement('video');
+                videoElement.src = URL.createObjectURL(file);
+                videoElement.controls = true;
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `
+                    <p><strong>${file.name}</strong></p>
+                    <p>${(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                `;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = 'Kaldır';
+                removeBtn.onclick = () => {
+                    videoFiles.splice(index, 1);
+                    updateVideoList();
+                };
+                
+                videoItem.appendChild(videoElement);
+                videoItem.appendChild(infoDiv);
+                videoItem.appendChild(removeBtn);
+                videoList.appendChild(videoItem);
+            });
+        }
+        
+        // Videoları birleştirme işlemi
+        mergeBtn.addEventListener('click', async () => {
+            if (videoFiles.length < 2) {
+                alert('En az 2 video seçmelisiniz!');
+                return;
+            }
+            
+            mergeBtn.disabled = true;
+            mergeBtn.textContent = 'Birleştiriliyor...';
+            
+            try {
+                // Burada gerçek bir birleştirme işlemi yapılabilir
+                // Bu örnekte sadece simüle ediyoruz
+                await simulateMerge();
+                
+                // Birleştirilmiş video URL'si oluşturma (gerçekte FFmpeg gibi araçlar kullanılır)
+                const mergedBlob = new Blob(videoFiles, { type: 'video/mp4' });
+                const mergedUrl = URL.createObjectURL(mergedBlob);
+                
+                downloadBtn.href = mergedUrl;
+                downloadBtn.style.display = 'inline-block';
+                
+                alert('Videolar başarıyla birleştirildi! İndir butonuna tıklayarak indirebilirsiniz.');
+            } catch (error) {
+                console.error('Birleştirme hatası:', error);
+                alert('Videolar birleştirilirken bir hata oluştu!');
+            } finally {
+                mergeBtn.disabled = false;
+                mergeBtn.textContent = 'Videoları Birleştir';
+            }
+        });
+        
+        // Birleştirme işlemini simüle etme
+        function simulateMerge() {
+            return new Promise((resolve) => {
+                setTimeout(resolve, 2000); // 2 saniye bekleme
+            });
+        }
+        
+        // Sayfa yüklendiğinde video listesini güncelle
+        updateVideoList();
+    </script>
 
-<script>
-  const inputVideo = document.getElementById('inputVideo');
-  const convertBtn = document.getElementById('convertBtn');
-  const preview = document.getElementById('preview');
-  const downloadLink = document.getElementById('downloadLink');
 
-  let videoFile;
-
-  inputVideo.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-      videoFile = e.target.files[0];
-      preview.src = URL.createObjectURL(videoFile);
-      preview.load();
-      convertBtn.disabled = false;
-      downloadLink.style.display = 'none';
-    }
-  });
-
-  convertBtn.addEventListener('click', async () => {
-    if (!videoFile) return;
-    convertBtn.disabled = true;
-    convertBtn.textContent = 'Dönüştürülüyor...';
-
-    // Video element ve MediaRecorder kullanarak WebM'ye kayıt yapacağız
-    const videoUrl = URL.createObjectURL(videoFile);
-    const video = document.createElement('video');
-    video.src = videoUrl;
-    video.muted = true;  // autoplay için sessiz olmalı
-    video.playsInline = true;
-    await video.play();
-
-    const stream = video.captureStream();
-    if (!stream) {
-      alert('Tarayıcınız video yakalamayı desteklemiyor.');
-      convertBtn.disabled = false;
-      convertBtn.textContent = "Videoyu WebM'ye Dönüştür";
-      return;
-    }
-
-    const options = { mimeType: 'video/webm; codecs=vp8' };
-    let recordedChunks = [];
-    const mediaRecorder = new MediaRecorder(stream, options);
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) recordedChunks.push(event.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      preview.src = url;
-      preview.load();
-      downloadLink.href = url;
-      downloadLink.download = videoFile.name.replace(/\.\w+$/, '') + '.webm';
-      downloadLink.style.display = 'inline-block';
-      downloadLink.textContent = "Videoyu İndir";
-      convertBtn.disabled = false;
-      convertBtn.textContent = "Videoyu WebM'ye Dönüştür";
-    };
-
-    // Yaklaşık video süresi kadar kayıt yapalım
-    video.onloadedmetadata = () => {
-      mediaRecorder.start();
-      setTimeout(() => {
-        mediaRecorder.stop();
-        video.pause();
-      }, video.duration * 1000);
-    };
-  });
-</script>
-</body>
-</html>
+</body></html>
