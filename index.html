@@ -1,203 +1,60 @@
-<html lang="tr"><head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Birleştirme Aracı</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-        }
-        .upload-area {
-            border: 2px dashed #ccc;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-            background-color: white;
-            border-radius: 5px;
-        }
-        .video-list {
-            margin-bottom: 20px;
-        }
-        .video-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: white;
-            border-radius: 5px;
-        }
-        .video-item video {
-            width: 100px;
-            margin-right: 10px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #downloadBtn {
-            display: none;
-            background-color: #2196F3;
-        }
-        #downloadBtn:hover {
-            background-color: #0b7dda;
-        }
-    </style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebM to MP4 Converter</title>
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #111; color: #fff; padding: 30px; }
+    input, button { margin: 10px; padding: 10px; font-size: 16px; }
+    #downloadLink { display: none; font-size: 16px; margin-top: 20px; }
+    #log { font-size: 14px; margin-top: 20px; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
-    <h1>Mp4 Dönüştürme Aracı</h1>
-    
-    <div class="upload-area" id="dropArea">
-        <p>Video dosyalarınızı buraya sürükleyip bırakın veya</p>
-        <input type="file" id="fileInput" accept="video/*" multiple="">
-        <p>MP4, MOV, AVI formatları desteklenmektedir</p>
-    </div>
-    
-    <div class="video-list" id="videoList"><div class="video-item"><video src="blob:https://looxmaxwu2.github.io/4fc1a95f-24c2-419f-832f-f90227bd86a2" controls=""></video><div>
-                    <p><strong>foto_video (1).webm</strong></p>
-                    <p>1.51 MB</p>
-                </div><button>Kaldır</button></div></div>
-    
-    <button id="mergeBtn" style="display: inline-block;">Videoyu Oluştur</button>
-    <a id="downloadBtn" download="birlesik_video.mp4" href="blob:https://looxmaxwu2.github.io/7a186d6c-176b-41d2-a01d-04c33a6e05b9" style="display: inline-block;">Videoyu İndir</a>
-    
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const dropArea = document.getElementById('dropArea');
-        const videoList = document.getElementById('videoList');
-        const mergeBtn = document.getElementById('mergeBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        
-        let videoFiles = [];
-        
-        // Dosya seçme işlemi
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
-        
-        // Sürükle bırak işlemi
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#4CAF50';
-        });
-        
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.style.borderColor = '#ccc';
-        });
-        
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#ccc';
-            handleFiles(e.dataTransfer.files);
-        });
-        
-        // Dosyaları işleme fonksiyonu
-        function handleFiles(files) {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                if (file.type.startsWith('video/')) {
-                    videoFiles.push(file);
-                }
-            }
-            updateVideoList();
-        }
-        
-        // Video listesini güncelleme
-        function updateVideoList() {
-            videoList.innerHTML = '';
-            
-            if (videoFiles.length === 0) {
-                videoList.innerHTML = '<p>Henüz video eklenmedi</p>';
-                mergeBtn.style.display = 'none';
-                return;
-            }
-            
-            mergeBtn.style.display = 'inline-block';
-            
-            videoFiles.forEach((file, index) => {
-                const videoItem = document.createElement('div');
-                videoItem.className = 'video-item';
-                
-                const videoElement = document.createElement('video');
-                videoElement.src = URL.createObjectURL(file);
-                videoElement.controls = true;
-                
-                const infoDiv = document.createElement('div');
-                infoDiv.innerHTML = `
-                    <p><strong>${file.name}</strong></p>
-                    <p>${(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                `;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = 'Kaldır';
-                removeBtn.onclick = () => {
-                    videoFiles.splice(index, 1);
-                    updateVideoList();
-                };
-                
-                videoItem.appendChild(videoElement);
-                videoItem.appendChild(infoDiv);
-                videoItem.appendChild(removeBtn);
-                videoList.appendChild(videoItem);
-            });
-        }
-        
-        // Videoları birleştirme işlemi
-        mergeBtn.addEventListener('click', async () => {
-            if (videoFiles.length < 2) {
-                alert('En az 2 video seçmelisiniz!');
-                return;
-            }
-            
-            mergeBtn.disabled = true;
-            mergeBtn.textContent = 'Birleştiriliyor...';
-            
-            try {
-                // Burada gerçek bir birleştirme işlemi yapılabilir
-                // Bu örnekte sadece simüle ediyoruz
-                await simulateMerge();
-                
-                // Birleştirilmiş video URL'si oluşturma (gerçekte FFmpeg gibi araçlar kullanılır)
-                const mergedBlob = new Blob(videoFiles, { type: 'video/mp4' });
-                const mergedUrl = URL.createObjectURL(mergedBlob);
-                
-                downloadBtn.href = mergedUrl;
-                downloadBtn.style.display = 'inline-block';
-                
-                alert('Videolar başarıyla birleştirildi! İndir butonuna tıklayarak indirebilirsiniz.');
-            } catch (error) {
-                console.error('Birleştirme hatası:', error);
-                alert('Videolar birleştirilirken bir hata oluştu!');
-            } finally {
-                mergeBtn.disabled = false;
-                mergeBtn.textContent = 'Videoları Birleştir';
-            }
-        });
-        
-        // Birleştirme işlemini simüle etme
-        function simulateMerge() {
-            return new Promise((resolve) => {
-                setTimeout(resolve, 2000); // 2 saniye bekleme
-            });
-        }
-        
-        // Sayfa yüklendiğinde video listesini güncelle
-        updateVideoList();
-    </script>
+  <h2>🎞 WebM → MP4 Dönüştürücü</h2>
+  <input type="file" id="uploader" accept=".webm" />
+  <br />
+  <button id="convertBtn">Dönüştür</button>
+  <br />
+  <a id="downloadLink" download="output.mp4">📥 MP4 İndir</a>
+  <div id="log"></div>
 
+  <script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+    const uploader = document.getElementById('uploader');
+    const convertBtn = document.getElementById('convertBtn');
+    const downloadLink = document.getElementById('downloadLink');
+    const log = document.getElementById('log');
 
-</body></html>
+    convertBtn.onclick = async () => {
+      if (!uploader.files.length) {
+        alert("Lütfen bir .webm dosyası seçin!");
+        return;
+      }
+
+      const file = uploader.files[0];
+      log.innerText = "🔄 FFmpeg yükleniyor...";
+      if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+      const inputName = 'input.webm';
+      const outputName = 'output.mp4';
+
+      log.innerText += "\n📥 Dosya belleğe yazılıyor...";
+      ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+      log.innerText += "\n🎬 Dönüştürülüyor...";
+      await ffmpeg.run('-i', inputName, '-c:v', 'libx264', '-c:a', 'aac', outputName);
+
+      log.innerText += "\n📤 MP4 dosyası hazırlanıyor...";
+      const data = ffmpeg.FS('readFile', outputName);
+      const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(mp4Blob);
+      downloadLink.href = url;
+      downloadLink.style.display = 'inline-block';
+      log.innerText += "\n✅ Bitti! MP4'ü indir.";
+    };
+  </script>
+</body>
+</html>
